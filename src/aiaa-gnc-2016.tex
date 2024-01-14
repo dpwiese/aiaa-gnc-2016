@@ -1,0 +1,1281 @@
+\documentclass[]{../sty/aiaa-tc}
+\usepackage{%
+  float,
+  amssymb,
+  fullpage,
+  indentfirst,
+  hyperref,
+  booktabs,
+  empheq,
+  mathtools,
+  marginnote,
+  enumerate,
+  amsthm,
+  thmtools,
+  array,
+  overcite,
+  amsmath,
+  times
+}
+\usepackage[shortlabels]{enumitem}
+\usepackage[compact]{titlesec}
+\usepackage[titles]{tocloft}
+\usepackage[english]{babel}
+
+\newcommand{\figurepath}{../fig}
+\newcommand{\bibsourcepath}{../bib/aiaa-gnc-2016}
+
+% Theorem styles
+\declaretheoremstyle[
+  headfont=\bfseries,
+  notebraces={}{},
+  notefont=\bfseries,
+  bodyfont=\itshape,
+  headpunct={},
+  headformat={\hspace{0.0in}\makebox[0.65in][l]{\NAME\ \NUMBER\ }{\NOTE}}\hspace{0.1in}
+]{thm-style-1}
+
+\declaretheoremstyle[
+  headfont=\bfseries,
+  notebraces={}{},
+  notefont=\bfseries,
+  bodyfont=\itshape,
+  headpunct={},
+  headformat={\hspace{0.0in}\makebox[0.65in][l]{\NAME\ \NUMBER\ }{\NOTE}}\hspace{0.1in}
+]{lem-style-1}
+
+\declaretheoremstyle[
+  headfont=\bfseries,
+  notebraces={}{},
+  notefont=\bfseries,
+  bodyfont=\itshape,
+  headpunct={},headformat={\NAME\ \NUMBER\ }
+]{cor-style-1}
+
+\declaretheoremstyle[
+  headfont=\scshape,
+  notefont=\itshape,
+  bodyfont=\normalfont,
+  headpunct=\relax,
+  headformat={\makebox[0.5in][r]{\NAME\ }\NOTE},
+]{prf-style-1}
+
+\declaretheoremstyle[
+  headfont=\bfseries,
+  notebraces={}{},
+  notefont=\bfseries,
+  headpunct={},headformat={\NAME\ \NOTE}
+]{ass-style-1}
+
+\declaretheoremstyle[
+  headfont=\bfseries,
+  notebraces={}{},
+  notefont=\bfseries,
+  headpunct={},
+  headformat={\NAME\ \NUMBER\ }{\NOTE}
+]{rem-style-1}
+
+%Need to undeclare the proof environment that amsthm provides but I can't use \renewenvironment
+\let\proof\relax
+\let\endproof\relax
+
+% Use these styles in definitions of proof, theorem, etc.
+\declaretheorem[style=thm-style-1,numbered=yes,name=Theorem]{thm-dan}
+\declaretheorem[style=lem-style-1,numbered=yes,name=Lemma]{lem-dan}
+\declaretheorem[style=cor-style-1,numbered=no,name=Corollary]{cor-dan}
+\declaretheorem[style=prf-style-1,name=Proof,qed=\qedsymbol]{proof-dan}
+\declaretheorem[style=ass-style-1,numbered=yes,name=Assumption]{ass-dan}
+\declaretheorem[style=rem-style-1,numbered=yes,name=Remark]{rem-dan}
+\declaretheorem[style=rem-style-1,numbered=yes,name=Definition]{defn-dan}
+\declaretheorem[style=rem-style-1,numbered=yes,name=Proposition]{prop-dan}
+
+%------------------------------------------------------------------------------------------------------------------
+%To allow bold symbols in section headings
+\makeatletter
+\g@addto@macro\bfseries{\boldmath}
+\makeatother
+%------------------------------------------------------------------------------------------------------------------
+
+\newtheoremstyle{examplestyle}% name of the style to be used
+{}% measure of space to leave above the theorem. E.g.: 3pt
+{}% measure of space to leave below the theorem. E.g.: 3pt
+{\slshape}% name of font to use in the body of the theorem
+{0pt}% measure of space to indent
+{\bfseries}% name of head font
+{\vspace{-6pt}}% punctuation between head and body eg \newline
+{0pt}% space after theorem head
+{}% Manually specify head
+\theoremstyle{examplestyle}
+\newtheorem{innercustomthm}{Assumption}
+\newenvironment{customthm}[1]
+  {\renewcommand\theinnercustomthm{#1}\innercustomthm\normalfont}
+  {\endinnercustomthm}
+
+\title{Sequential Loop Closure Based Adaptive Autopilot Design for a Hypersonic Vehicle}
+\author{%
+Daniel P. Wiese\thanks{Graduate Student, Mechanical Engineering, 77 Massachusetts Avenue Rm 3--441, Student Member AIAA}
+\ and
+Anuradha M. Annaswamy\thanks{Senior Research Scientist, Mechanical Engineering, 77 Massachusetts Avenue Rm 3--348, Member AIAA} \\
+{\normalsize\itshape{}Massachusetts Institute of Technology, Cambridge, MA 02139, USA} \\[4pt]
+Jonathan A. Muse\thanks{Research Aerospace Engineer, Autonomous Control Branch, Senior Member AIAA}
+\ and
+Michael A. Bolender \thanks{Senior Aerospace Engineer, Autonomous Control Branch, Associate Fellow AIAA} \\
+{\normalsize\itshape{}U.S. Air Force Research Laboratory, 2210 Eighth St., Wright-Patterson Air Force Base, Ohio 45433, USA} \\
+Eugene Lavretsky \thanks{Boeing Senior Technical Fellow, Associate Fellow AIAA} \\
+{\normalsize\itshape{}The Boeing Company, Huntington Beach, CA 92647, USA}
+}
+
+\AIAApapernumber{YEAR-NUMBER}
+\AIAAconference{Conference Name, Date, and Location}
+\AIAAcopyright{\AIAAcopyrightD{YEAR}}
+
+\begin{document}
+
+  \maketitle
+
+  \begin{abstract}
+    This paper presents a sequential loop closure approach to designing a velocity and altitude tracking autopilot for a hypersonic vehicle.
+    The control architecture consists of two decoupled control subsystems, one for velocity, the other for altitude.
+    The velocity control subsystem consists of an adaptive augmented baseline controller.
+    The altitude control subsystem consists of an adaptive inner-loop designed to accommodate uncertainties in the stability and control derivatives of the aircraft, and track pitch-rate commands.
+    The outer-loop is designed independent of the inner loop, and guarantees stability of the closed-loop system.
+    The outer-loop uses components of a closed-loop reference model, and generates the appropriate pitch-rate commands for the inner loop such that the hypersonic vehicle tracks the desired altitude.
+    A numerical example based on a scramjet powered, blended wing-body generic hypersonic vehicle model is presented, demonstrating the efficacy of the proposed control design.
+  \end{abstract}
+
+  \section{Introduction}\label{sec.intro}
+
+  Automatic control as been used to improve the flying qualities of aircraft and reduce pilot workload for more than one hundred years, with the first autopilot having been invented by the Sperry Corporation in 1912.
+  Since then this field has grown into the broad discipline we now call guidance, navigation, and control, or GNC.\
+  In order to provide some context for the control architecture proposed in this paper as compared to existing approaches, we first provide an overview of the accepted definitions for each of these terms.
+  Guidance refers to the process of determining a desired path for a vehicle to follow and generating the appropriate maneuvers for realizing these paths;\cite{draper.apollo.1965} navigation is the process of determining a vehicle's location, attitude, and velocity; and control is the interface between the guidance system and the vehicle, providing the necessary actuator inputs to stabilize and change the motion of the vehicle.
+
+  There are many different systems onboard a modern aircraft, and these systems can be delineated based on whether they provide the function of guidance, navigation, or control.
+  Stability derivative augmenter systems, or stability augmentation systems (SAS) refer to systems which alter an aircraft's stability derivatives by means of feedback control thus providing artificial stability for aircraft with undesirable flying characteristics, without the pilots perception.\cite{mclean.flightcontrol.1990,nelson.flightcontrol.1998,abzug.stability.2005}
+  Also, control or command augmentation systems (CAS) allow a pilot or guidance system to specify desired values of certain aircraft motions, such as a desired vertical acceleration, angle-of-attack, or roll angle.
+  These types of systems typically fall under the category of inner-loop control, as they are typically represented in a block diagram as the inner loop, with an outer-loop providing the function of autopilots, pilot relief, guidance, and navigation.\cite{yechout.flightmechanics.2003}
+  In making this distinction between guidance, navigation, and control systems, we reserve the usage of the term autopilot to mean a guidance component which is capable of tracking of variables which more meaningfully describe the path of an aircraft, such as flight path angle, altitude, or heading angle.
+
+  Historically, the design of flight control systems has used sequential loop closure to synthesize feedback control laws.
+  These control laws are typically designed separately for the longitudinal and lateral-directional dynamics, as these dynamics are decoupled under most flight conditions.\cite{stevenslewis.aircraftcontrol.2003}
+  When closing each successive loop, practical experience, root locus techniques, and frequency domain techniques are used to determine how to feed back each specific measured signal, such as pitch rate or angle of attack, to a particular control surface.
+  In doing this, the aircraft could be given desirable closed-loop performance and stability margins.
+  Conventional flight control techniques such as classical sequential loop closure require precise and accurate knowledge of the aerodynamic characteristics of the aircraft, and the resulting controllers are designed with sufficient margins to accommodate any uncertainties encountered during flight.
+  However, when designing flight controllers for modern aircraft such as hypersonic vehicles, obtaining accurate values of the aerodynamic characteristics is much more challenging, thus making the process of designing a stabilizing controller more challenging as well.
+  This has led to an increased use of adaptive techniques to solve flight control problems, with great success.\cite{lavretskywise.book.2013}
+
+  Many of these adaptive controllers have focused only on the problem of inner-loop control.\cite{mcfarland.autopilot.1996,wise.munition.2005,wise.autopilot.2008,qu.gnc.2013,wiese.adaptive.2013,wiese.gnc.2015,wiese.jgcd.2015}
+  This inner-loop design procedure enabled the design of a lower order controller to provide stability in the presence of uncertainties, but have not provided the ability to track meaningful flight trajectories; guidance loops were typically not designed.
+  The design of the guidance laws for vehicles with adaptive inner loop controllers is typically accomplished using ad-hoc methods, with stability and performance of the closed-loop system only verified through simulation.
+
+  An alternative to this approach is to use a higher order model to represent the vehicle dynamics, and design guidance and control laws simultaneously.
+  The result is a more complex controller with a greater number of integrators and adaptive parameters.
+  In Reference [\citen{gibson.adaptive.2008}] an adaptive controller was designed for a linear system which represents the longitudinal dynamics of a hypersonic vehicle.
+  The controller used feedback from all five state variables and two additional integral error states to each of the three control inputs, with additional feed forward terms, resulting in 27 adaptive parameters, plus additional adaptive parameters to accommodate actuator saturation.
+
+  Other approaches have used sequential loop closure on higher order nonlinear models.
+  In Reference [\citen{fiorentini.canard.2008}] the non-minimum phase dynamics typically associated with the transfer function from an aircraft's elevator input to the altitude were overcome by the addition of a canard, which would be practically impossible to implement on a hypersonic vehicle.
+  In Reference [\citen{fiorentini.nmp.2009}] a canard is no longer used, and the resulting unstable zero dynamics associated with regulating flight path angle using the elevator input are overcome using a non-adaptive dynamic inversion controller with a low gain outer loop and saturation functions.
+  Reference [\citen{bodson.autopilot.2003}] uses an adaptive dynamic inversion inner-loop control law, with a parameter identification algorithm which requires the state derivative be measurable.
+  The outer-loop is closed using sequential loop closure, but no stability proof is provided to ensure stability of the overall closed-loop system.
+
+  The goal of this work is to use a sequential loop closure based design to synthesize a guidance and control law for a vehicle which has uncertain parameters.
+  This approach simplifies the process of designing guidance and control laws from that of designing a single higher-order controller to instead designing several lower-order controllers.
+  A robust adaptive inner-loop controller along the lines of References [\citen{wise.munition.2005,wise.autopilot.2008,wiese.adaptive.2013,lavretskywise.book.2013}] is used to maintain vehicle stability in the presence of uncertainties, and the outer guidance loop generates appropriate inner loop reference commands so that the vehicle follows a desired trajectory.
+  The outer-loop uses components of a closed-loop reference model, and the resulting closed-loop system is shown to be globally stable.
+
+  In Section~\ref{sec.analysisandclassical}, we introduce the aircraft dynamics, show how uncertainties in the vehicle stability and control derivatives manifested themselves in the dynamics, and propose the use of an integrator to facilitate command tracking.
+  In Section~\ref{sec.innerloopadaptive}, we design a baseline controller for the vehicle using a sequential loop closure procedure, when no uncertainties are present.
+  Section~\ref{sec.outerloop} describes the design of an adaptive inner-loop controller to accommodate uncertainties.
+  Section~\ref{sec.simulationresults} describes how the existing baseline design is used in the sequential loop closure design around the adaptive inner loop.
+  Finally, in Section~\ref{sec.simulationresults}, the proposed control architecture is applied a Generic Hypersonic Vehicle (GHV) to illustrate the efficacy of this method.
+
+  \section{Control Problem Formulation}\label{sec.analysisandclassical}
+
+  Consider the following model which describes the linearized longitudinal flight dynamics of a GHV, where $v_{}$ is the velocity, $\alpha$ is the angle-of-attack, $q$ the pitch rate, $\theta$ the pitch angle, $h$ the altitude, $u_{\text{th}}$ the throttle equivalence ratio, and $u_{e}$ the elevator deflection angle.\cite{stengel.flightdynamics.2004}
+  This model is obtained by linearizing the dynamics of the GHV about a trim condition.
+  The \textit{control goal} is to design a controller which will ensure command tracking of altitude and velocity commands.
+
+  \begin{equation}
+    \label{eqn.longandvelocityss}
+    \begin{split}
+      \begin{bmatrix}
+        \dot{v}_{} \\
+        \dot{\alpha} \\
+        \dot{q} \\
+        \dot{\theta} \\
+        \dot{h}
+      \end{bmatrix}
+      &=
+      \begin{bmatrix}
+        X_{v} & X_{\alpha} & X_{q} & -g\cos(\gamma_{\text{eq}}) & X_{h} \\
+        \frac{Z_{V}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & \frac{Z_{\alpha}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & \frac{v_{\text{eq}}+Z_{q}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & -\frac{g\sin({\gamma_{\text{eq}}})}{v_{\text{eq}}-Z_{\dot{\alpha}}} & 0\\
+        M_{V}+\frac{M_{\dot{\alpha}}Z_{V}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & M_{\alpha}+\frac{M_{\dot{\alpha}}Z_{\alpha}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & M_{q}+\frac{M_{\dot{\alpha}}(v_{\text{eq}}+Z_{q})}{v_{\text{eq}}-Z_{\dot{\alpha}}} & M_{\theta}-\frac{M_{\dot{\alpha}}g\sin(\gamma_{\text{eq}})}{v_{\text{eq}}-Z_{\dot{\alpha}}} & 0 \\
+        0 & 0 & 1 & 0 & 0 \\
+        \sin(\gamma_{\text{eq}}) & -v_{\text{eq}}\cos(\gamma_{\text{eq}}) & 0 & v_{\text{eq}}\cos(\gamma_{\text{eq}}) & 0
+      \end{bmatrix}
+      \begin{bmatrix}
+        v_{} \\
+        \alpha \\
+        q \\
+        \theta \\
+        h
+      \end{bmatrix} \\
+      &+
+      \begin{bmatrix}
+        X_{u_{\text{th}}}\cos(\alpha_{\text{eq}}) & X_{u_{e}} \\
+        -\frac{X_{u_{\text{th}}}\sin(\alpha_{\text{eq}})}{v_{\text{eq}}-Z_{\dot{\alpha}}} & \frac{Z_{u_{e}}}{v_{\text{eq}}-Z_{\dot{\alpha}}} \\
+        M_{u_{\text{th}}}+\frac{M_{\dot{\alpha}}Z_{u_{\text{th}}}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & M_{u_{e}}+\frac{M_{\dot{\alpha}}Z_{u_{e}}}{v_{\text{eq}}-Z_{\dot{\alpha}}} \\
+        0 & 0 \\
+        0 & 0
+      \end{bmatrix}
+      \begin{bmatrix}
+        u_{\text{th}} \\
+        u_{e}
+      \end{bmatrix} \\
+    \end{split}
+  \end{equation}
+
+  In order to achieve the goal of designing a controller which will provide tracking of velocity and altitude commands, many approaches are available.
+  For instance, the system in\ \eqref{eqn.longandvelocityss} could be used as the design model, and a state-feedback MIMO controller could be designed for this model, resulting in a controller with many gains to determine.
+  Alternatively, the system in\ \eqref{eqn.longandvelocityss} could be further simplified, facilitating the design of several lower order controllers and fewer gains to select; this is the approach taken in this work.
+
+  For the GHV, and many other flight vehicles, performing a modal analysis on the system represented in\ \eqref{eqn.longandvelocityss} for most flight conditions shows strong decoupling between the velocity dynamics and the remaining longitudinal dynamics, as described in Reference [\citen{wiese.adaptive.2013}].
+  This allows the velocity dynamics to be considered independently from the longitudinal dynamics, and the corresponding velocity controller to be designed separately from the longitudinal controller.
+  Furthermore, the $-(g\sin{\gamma_{\text{eq}}})/(v_{\text{eq}}-Z_{\dot{\alpha}})$ and $M_{\theta}-(M_{\dot{\alpha}}g\sin(\gamma_{\text{eq}}))/(v_{\text{eq}}-Z_{\dot{\alpha}})$ terms in\ \eqref{eqn.longandvelocityss} are negligible.
+  Lastly, the trim condition for the sequential loop closure adaptive autopilot design in this work is taken as steady level flight at cruise.
+  The resulting simplified decoupled velocity dynamics are described by
+  \begin{equation}
+    \label{eqn.velocityss}
+    \dot{v}_{} = X_{v}v_{} + X_{\text{th}}\cos(\alpha_{\text{eq}})u_{\text{th}}
+  \end{equation}
+  and the resulting simplified decoupled longitudinal dynamics are given by
+  \begin{equation}
+    \label{eqn.longitudinalss}
+    \begin{bmatrix}
+      \dot{\alpha} \\
+      \dot{q} \\
+      \dot{\theta} \\
+      \dot{h}
+    \end{bmatrix}=
+    \begin{bmatrix}
+      \frac{Z_{\alpha}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & \frac{v_{\text{eq}}+Z_{q}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & 0 & 0 \\
+      M_{\alpha}+\frac{M_{\dot{\alpha}}Z_{\alpha}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & M_{q}+\frac{M_{\dot{\alpha}}(v_{\text{eq}}+Z_{q})}{v_{\text{eq}}-Z_{\dot{\alpha}}} & 0 & 0 \\
+      0 & 1 & 0 & 0 \\
+      -v_{\text{eq}}\cos(\gamma_{\text{eq}}) & 0 & v_{\text{eq}}\cos(\gamma_{\text{eq}}) & 0 \\
+    \end{bmatrix}
+    \begin{bmatrix}
+      \alpha \\
+      q \\
+      \theta \\
+      h
+    \end{bmatrix}+
+    \begin{bmatrix}
+      \frac{Z_{u_{e}}}{v_{\text{eq}}-Z_{\dot{\alpha}}} \\
+      M_{u_{e}}+\frac{M_{\dot{\alpha}}Z_{u_{e}}}{v_{\text{eq}}-Z_{\dot{\alpha}}} \\
+      0 \\
+      0
+    \end{bmatrix}
+    u_{e}
+  \end{equation}
+  The lower block triangular structure of\ \eqref{eqn.longitudinalss} allows the further partitioning of the longitudinal dynamics into the short period and phugoid, or guidance dynamics.
+  The short-period dynamics are given by
+  \begin{equation}
+    \label{eqn.shortperiodss}
+    \begin{bmatrix}
+      \dot{\alpha} \\
+      \dot{q}
+    \end{bmatrix}=
+    \begin{bmatrix}
+      \frac{Z_{\alpha}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & \frac{v_{\text{eq}}+Z_{q}}{v_{\text{eq}}-Z_{\dot{\alpha}}} \\
+      M_{\alpha}+\frac{M_{\dot{\alpha}}Z_{\alpha}}{v_{\text{eq}}-Z_{\dot{\alpha}}} & M_{q}+\frac{M_{\dot{\alpha}}(v_{\text{eq}}+Z_{q})}{v_{\text{eq}}-Z_{\dot{\alpha}}} \\
+    \end{bmatrix}
+    \begin{bmatrix}
+      \alpha \\
+      q
+    \end{bmatrix}+
+    \begin{bmatrix}
+      \frac{Z_{u_{e}}}{v_{\text{eq}}-Z_{\dot{\alpha}}} \\
+      M_{u_{e}}+\frac{M_{\dot{\alpha}}Z_{u_{e}}}{v_{\text{eq}}-Z_{\dot{\alpha}}} \\
+    \end{bmatrix}
+    u_{e}
+  \end{equation}
+  and the guidance dynamics are given by
+  \begin{equation}
+    \label{eqn.guidancess}
+    \begin{bmatrix}
+      \dot{\theta} \\
+      \dot{h}
+    \end{bmatrix}=
+    \begin{bmatrix}
+      0 & 0 \\
+      v_{\text{eq}}\cos(\gamma_{\text{eq}}) & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+      \theta \\
+      h
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+      0 & 1 \\
+      -v_{\text{eq}}\cos(\gamma_{\text{eq}}) & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+      \alpha \\
+      q
+    \end{bmatrix}
+  \end{equation}
+  Together, the short-period dynamics in\ \eqref{eqn.shortperiodss} and the guidance dynamics in\ \eqref{eqn.guidancess} equivalently describe the longitudinal dynamics in\ \eqref{eqn.longitudinalss}.
+
+  \subsection{Representation of Uncertainties}
+
+  When the stability and control derivatives in\ \eqref{eqn.longandvelocityss} are unknown, this uncertainty is reflected in the decoupled systems of\ \eqref{eqn.velocityss} and\ \eqref{eqn.shortperiodss}, which can both be represented by an equation of the following form
+  \begin{equation}
+    \label{eqn.openloopFORMsystemwithz}
+    \begin{split}
+      \dot{x}_{p} &= A_{p}x_{p} + B_{p}(\Lambda u + \Psi_{p}^{\top}x_{p}) \\
+      z &= C_{pz}x_{p} + D_{pz}(\Lambda u + \Psi_{p}^{\top}x_{p})\\
+    \end{split}
+  \end{equation}
+  where $A_{p}\in\mathbb{R}^{n_{p}\times n_{p}}$, $B_{p}\in\mathbb{R}^{n_{p}\times m}$, $C_{pz}\in\mathbb{R}^{n_{e}\times n_{p}}$, and $D_{pz}\in\mathbb{R}^{n_{e}\times m}$ are constant \textit{known} matrices, and where $z$ represents the regulated output and the number of regulated outputs cannot exceed the number of inputs, that is $n_{e}\leq m$.
+  The uncertainties represented by $\Lambda\in\mathbb{R}^{m\times m}$ and $\Psi_{p}\in\mathbb{R}^{n_{p}\times m}$ are \textit{unknown} matrices.
+
+  The design of a state-feedback controller for an unknown system in the form of\ \eqref{eqn.openloopFORMsystemwithz} is relatively straightforward.
+  Adaptive control can be used to accommodate the uncertainties $\Lambda$ and $\Psi_{p}$, and integral action used to facilitate command tracking of the regulated output $z$.
+  In order to accomplish the control goal of designing a command tracking controller for velocity and altitude, we note that the longitudinal dynamics in\ \eqref{eqn.longitudinalss} can also be represented in the form of\ \eqref{eqn.openloopFORMsystemwithz}.
+  This would allow us to select $z$ in\ \eqref{eqn.openloopFORMsystemwithz} to correspond to altitude, and design a controller to track altitude.
+  However, it is often practical to design an adaptive controller for a lower order system, with only those adjustable parameters necessary to accommodate the uncertainty.
+  To do so, the reduced order short-period dynamics of\ \eqref{eqn.shortperiodss} are represented as in\ \eqref{eqn.openloopFORMsystemwithz}, and an adaptive controller is designed for this system.
+
+  However, in designing a controller for the short-period dynamics in\ \eqref{eqn.shortperiodss} the altitude is not available as a regulated output, and so we must instead select the regulated output to correspond to a variable such as pitch-rate or vertical acceleration.
+  This makes the goal of altitude command tracking more difficult.
+  Given the short-period system in\ \eqref{eqn.shortperiodss} represented as in\ \eqref{eqn.openloopFORMsystemwithz} with stabilizing adaptive controller, the control goal is reformulated as selecting the appropriate inner-loop command such that the altitude, as obtained by incorporating\ \eqref{eqn.guidancess}, tracks the altitude command.
+  This is the sequential loop closure procedure, wherein the adaptive inner-loop controller for the short-period dynamics in\ \eqref{eqn.shortperiodss} is designed first, after which the guidance dynamics in\ \eqref{eqn.guidancess} are then included and additional loops are closed.
+  Before we proceed, we make the following assumptions about the form of the system represented in\ \eqref{eqn.openloopFORMsystemwithz}.
+
+  \begin{customthm}{1} $\;$\label{ass.plant}
+    \begin{enumerate}[\Alph{enumi}), ref=\Alph{enumi}] % chktex 9 chktex 10
+      \itemsep0em
+      \item{$(A_{p}^{},B_{p}^{})$ is controllable.\label{ass.p.cont}}
+      \item{$B_{p}^{}$ is full rank.\label{ass.p.rank}}
+      \item{$\Lambda^{}$ is nonsingular and diagonal with entries of known sign\label{ass.p.unc}}
+      \item{The rank of the following matrix is full\label{ass.p.tzero}}
+      \begin{equation*}
+        \text{rank}\left(
+        \begin{bmatrix}
+          A_{p}^{} & B_{p}^{} \\
+          C_{pz}^{} & D_{pz}^{}
+        \end{bmatrix}\right)
+        =n_{p} + n_{e}
+      \end{equation*}
+    \end{enumerate}
+  \end{customthm}
+  In order to facilitate command tracking of the command $z_{\text{cmd}}$ by $z$, we introduce integral action with an additional state $x_{e}$ defined as
+  \begin{equation}
+    \label{eqn.integrator}
+    \dot{x}_{e} = z_{\text{cmd}} - z
+  \end{equation}
+  In order to accomplish the control goal of velocity command tracking, the integral error state in\ \eqref{eqn.integrator} corresponding to\ \eqref{eqn.velocityss} will be selected as velocity.
+  For\ \eqref{eqn.shortperiodss} the integral error state will be used to accomplish command tracking of pitch-rate, vertical acceleration, or a similar command.
+  This integral error state is appended to the plant in\ \eqref{eqn.openloopFORMsystemwithz} leading to the following augmented open-loop dynamics
+  \begin{equation}
+    \label{eqn.augmented}
+    \begin{bmatrix}
+      \dot{x}_{p} \\
+      \dot{x}_{e}
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+      A_{p} & 0 \\
+      -C_{pz} & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+      x_{p} \\
+      x_{e}
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+      B_{p} \\
+      -D_{pz}
+    \end{bmatrix}
+    (\Lambda u + \Psi_{p}^{\top}x_{p})
+    +
+    \begin{bmatrix}
+      0 \\
+      I
+    \end{bmatrix}
+    z_{\text{cmd}}
+  \end{equation}
+  The system in\ \eqref{eqn.augmented} can be written more compactly as follows
+  \begin{equation}
+    \label{eqn.uncsystem}
+    \begin{split}
+      \dot{x} &= Ax+B(\Lambda u+\Psi^{\top}x)+B_{\text{cmd}}z_{\text{cmd}} \\
+      z &= C_{z}x + D_{z}(\Lambda u + \Psi^{\top} x)
+    \end{split}
+  \end{equation}
+  The augmented state vector $x$ is given by
+  \begin{equation*}
+    x =
+    \begin{bmatrix}
+      x_{p}^{\top} &
+      x_{e}^{\top}
+    \end{bmatrix}^{\top}
+  \end{equation*}
+  The matrices $A\in\mathbb{R}^{n\times n}$, $B\in\mathbb{R}^{n\times m}$, $B_{\text{cmd}}\in\mathbb{R}^{n\times n_{e}}$, $C_{z}\in\mathbb{R}^{n_{e}\times n}$, and $D_{z}\in\mathbb{R}^{n_{e}\times m}$ are \textit{known}, and given by
+  \begin{equation*}
+    A=
+    \begin{bmatrix}
+      A_{p} & 0_{n_{p}\times n_{e}} \\
+      -C_{pz} & 0_{n_{e}\times n_{e}}
+    \end{bmatrix} \quad
+    B=
+    \begin{bmatrix}
+      B_{p} \\
+      -D_{pz}
+    \end{bmatrix}
+    \quad
+    B_{\text{cmd}}=
+    \begin{bmatrix}
+      0_{n_{p}\times m} \\
+      I_{n_{e}\times n_{e}}
+    \end{bmatrix}
+    \quad
+    C_{z} =
+    \begin{bmatrix}
+      C_{pz} & 0_{n_{e}\times n_{e}}
+    \end{bmatrix}
+    \quad
+    D_{z} = D_{pz}
+  \end{equation*}
+  and the matrix $\Psi=[\;\Psi_{p}^{\top}\;\;0_{m\times n_{e}}\;]^{\top}$ is \textit{unknown}.
+  It can be shown that Assumption~\ref{ass.plant} regarding the plant in\ \eqref{eqn.openloopFORMsystemwithz} is equivalent to Assumption~\ref{ass.uncsystem} regarding the system in\ \eqref{eqn.uncsystem}, which is stated below.
+
+  \begin{customthm}{$1^{\prime}$} $\;$\label{ass.uncsystem}
+    \begin{enumerate}[\Alph{enumi}), ref=\Alph{enumi}] % chktex 9 chktex 10
+      \itemsep0em
+      \item{$(A,B)$ is controllable.\label{ass.cont}}
+      \item{$B$ is full rank.\label{ass.rank}}
+      \item{$\Lambda$ is nonsingular and diagonal with entries of known sign\label{ass.unc}}
+    \end{enumerate}
+  \end{customthm}
+
+  The underlying problem here is to design a control input $u$ for\ \eqref{eqn.uncsystem} so that the closed-loop system has bounded solutions and $z$ tends to $z_{\text{cmd}}$ with bounded errors in the presence of the uncertainties $\Lambda$ and $\Psi$.
+  In the following section, we describe the baseline control design for the nominal case when there are no uncertainties present, that is when $\Lambda=I$ and $\Psi=0$ as follows.
+  \begin{equation}
+    \label{eqn.cersystem}
+    \begin{split}
+      \dot{x} &= Ax+Bu+B_{\text{cmd}}z_{\text{cmd}} \\
+      z &= C_{z}x + D_{z}u \\
+    \end{split}
+  \end{equation}
+
+  \section{Baseline Control Design}\label{sec.baseline}
+
+  In this section we use a sequential loop closure approach to designing a stabilizing inner-loop controller and outer-loop autopilot which will allow altitude commands to be tracked when the vehicle parameters are completely known, as well as the velocity controller.
+  The inner-loop designed around the short-period dynamics in\ \eqref{eqn.shortperiodss} first, after which the guidance dynamics in\ \eqref{eqn.guidancess} are then included and additional loops are closed.
+  The resulting design will ultimately serve as the reference model for the adaptive controller in Sections~\ref{sec.innerloopadaptive} and~\ref{sec.outerloop}.
+  In order to work through the control design in this section, we insert some numerical values into\ \eqref{eqn.velocityss} and\ \eqref{eqn.longitudinalss} from the GHV, trimmed at a steady level flight condition of Mach 6 and an altitude of 80,000 feet.
+  The elevator input is in degrees, velocity in feet per second, angle of attack and pitch angle in radians, pitch rate in radians per second, and altitude in feet.
+  The numerical values can be found in the Appendix.
+
+  \subsection{Closing the Velocity Loop}\label{subsec.velocity}
+
+  Closing the velocity loop around\ \eqref{eqn.velocityss} is relatively simple, as this subsystem is stable.
+  Classical techniques, such as those using the root locus, can be used to design the feedback compensator for the velocity subsystem, as well as modern control techniques.
+  Using integral action described in\ \eqref{eqn.integrator}, where the regulated output $z$ is taken as the velocity, results in a nominal system with the form of\ \eqref{eqn.cersystem}.
+  The velocity control law is selected as follows
+  \begin{equation}
+    \label{eqn.uth}
+    u_{\text{th}} = K_{x_{\text{th}}}^{\top}x
+  \end{equation}
+  For this inner loop design, we use LQR to select the gain $K_{x_{\text{th}}}$, with weighting matrices $Q_{\text{lqr}}$ and $R_{\text{lqr}}$ given by
+  \begin{equation*}
+    Q_{\text{lqr}} = \text{diag}\bigr([
+    \begin{array}{ccc}
+      10 & 1
+    \end{array}]\bigr)
+    \qquad
+    R_{\text{lqr}} = 10
+  \end{equation*}
+  These weighting matrices provided an infinite gain margin, and a phase margin of 89 degrees at the control input $u_{\text{th}}$, as shown in the following Bode plot.
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=3.7in]{\figurepath/bode_velocity_01.eps}
+      \vspace{-0.1in}
+      \caption{Velocity Bode plot at control input}
+    \end{center}
+  \end{figure}
+
+  \subsection{Closing the Inner Short-Period Loop}\label{subsec.innerloop}
+
+  To design the inner-loop short-period controller for\ \eqref{eqn.shortperiodss} we again use integral action described in\ \eqref{eqn.integrator} where the regulated output $z$ is taken to be pitch rate, results in a nominal system as in\ \eqref{eqn.cersystem}.
+  The inner-loop control law is selected as follows
+  \begin{equation}
+    \label{eqn.ue}
+    u_{e} = K_{x_{e}}^{\top}x
+  \end{equation}
+  For this inner loop design, we use LQR to select the gain $K_{x_{e}}$, with weighting matrices $Q_{\text{lqr}}$ and $R_{\text{lqr}}$ given by
+  \begin{equation*}
+    Q_{\text{lqr}} = \text{diag}\bigr([
+    \begin{array}{ccc}
+      0 & 0 & 10
+    \end{array}]\bigr)
+    \qquad
+    R_{\text{lqr}} = 0.01
+  \end{equation*}
+  These weighting matrices provided a gain margin of -8.6 dB, and a phase margin of 62 degrees at the control input $u_{e}$, as shown in the following Bode plot.
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=3.7in]{\figurepath/bode_inner_01.eps}
+      \vspace{-0.1in}
+      \caption{Inner-loop Bode plot at control input}
+    \end{center}
+  \end{figure}
+
+  This controller is represented by the block diagram in Figure~\ref{fig.innerloopblock}, where the gain $K_{x}$ is given by
+  \begin{equation*}
+    K_{x} =
+    \bigr[
+    \begin{array}{ccc}
+      K_{\alpha} & K_{q} & K_{e}
+    \end{array}
+    \bigr]^{\top}
+  \end{equation*}
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=4.0in]{\figurepath/closing_the_inner_loop4.pdf}
+      \vspace{-0.1in}
+      \caption{Inner-loop block diagram\label{fig.innerloopblock}}
+    \end{center}
+  \end{figure}
+
+  \subsection{Closing the Pitch Angle Loop}
+
+  Feedback on angle of attack and pitch rate with gains $K_{\alpha}$, and $K_{q}$, and integral error state with gain $K_{e}$ was used to stabilize the open-loop system and accomplish reference tracking.
+  With this closed inner loop, the transfer function from the new input $q_{\text{cmd}}$ to the pitch angle $\theta$ and altitude $h$ as shown in Figure~\ref{fig.innerloopblock} are shown below.
+  With this inner loop closed, we now need to look at the transfer function from $q_{\text{cmd}}$ to $\theta$ and $h$, and close another loop to allow altitude tracking.
+  These transfer functions are given by
+  \begin{equation*}
+    \begin{split}
+      \frac{\theta}{q_{\text{cmd}}}(s)&=\frac{5.869 (s+0.243)}{s (s+0.1928) (s^{2} + 4.896s + 7.397)} \\
+      \frac{h}{q_{\text{cmd}}}(s)&=\frac{-24.624 (s+18.49) (s-18.37)}{s^2 (s+0.1928) (s^{2} + 4.896s + 7.397)}
+    \end{split}
+  \end{equation*}
+  From these transfer functions it is obvious that closing the altitude loop next is challenging due to the presence of the double integrator and unstable zero.
+  For these reasons, we choose to close the pitch angle loop first, and start by looking at the root locus for this transfer function.
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=2.5in]{\figurepath/root_locus_Gml_02.pdf}
+      \vspace{-0.1in}
+      \caption{Root locus plot for transfer function $\theta(s)/q_{\text{cmd}}(s)$\label{fig.rl_qcmd_theta}}
+    \end{center}
+  \end{figure}
+  We use the root locus plot of $\theta(s)/q_{\text{cmd}}(s)$ in Figure~\ref{fig.rl_qcmd_theta}, to design the feedback controller $G_{\theta m}(s)$ from $\theta$ to $q_{\text{cmd}}$.
+  We pick the controller to have the following form
+  \begin{equation}
+    \label{eqn.Gthetam}
+    G_{\theta m}(s)=K_{\theta m}\frac{s+z_{\theta m}}{s+p_{\theta m}}
+  \end{equation}
+  where $0<z_{\theta m}<p_{\theta m}$.
+  Choosing
+  \begin{equation*}
+    z_{\theta m} = 1
+    \qquad
+    p_{\theta m} = 4
+  \end{equation*}
+  fixing $K_{\theta m}=1$ for now, the root locus becomes
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=2.5in]{\figurepath/root_locus_Gml_Gthetam_02.pdf}
+      \vspace{-0.1in}
+      \caption{Root locus plot for transfer function $G_{\theta m}(s)\cdot \theta(s)/q_{\text{cmd}}(s)$.\label{fig.rootlocus_Gml}}
+    \end{center}
+  \end{figure}
+  Using this root locus we pick $K_{\theta m} = 5$ giving the following compensator which completes the design of the pitch angle loop closure.
+  \begin{equation*}
+    G_{\theta m}(s) = 5 \frac{s+1}{s+4}
+  \end{equation*}
+  The block diagram with the pitch angle loop closed is given by
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=5.0in]{\figurepath/closing_pitch_angle_loop_v03.pdf}
+      \vspace{-0.1in}
+      \caption{Pitch angle loop block diagram}
+    \end{center}
+  \end{figure}
+  The controller selected as described above provided infinite gain margin, and a phase margin of 72 degrees at the control input $u_{e}$, as shown in the following Bode plot.
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=4.0in]{\figurepath/bode_theta_01.eps}
+      \vspace{-0.1in}
+      \caption{Closed pitch-angle loop Bode plot at control input}
+    \end{center}
+  \end{figure}
+
+  \subsection{Closing the Altitude Loop}
+
+  With the pitch angle loop closed, we can achieve good time response performance when looking at the step input from $\theta_{\text{cmd}}$ to $\theta$.
+  Now all that is left is to close the final altitude loop to generate the appropriate pitch angle command signal $\theta_{\text{cmd}}$ so that the altitude $h$ will track $h_{\text{cmd}}$.
+  The transfer function from $\theta_{\text{cmd}}$ to $h$ is given by
+  \begin{equation*}
+    \begin{split}
+      \frac{h}{\theta_{\text{cmd}}}(s)&=\frac{-123.12 (s-18.37) (s+18.49) (s+1)}{s (s + 5.854) (s + 0.6163) (s+0.2626) (s^{2} + 2.356s + 7.529)}
+    \end{split}
+  \end{equation*}
+  The corresponding root locus is
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=5.5in]{\figurepath/root_locus_Gml_thetacmd_06.pdf}
+      \vspace{-0.1in}
+      \caption{Root locus plot for transfer function $h(s)/\theta_{\text{cmd}}(s)$. The figure on the right shows a zoomed view.}
+    \end{center}
+  \end{figure}
+  However, looking at the root locus for this system, the problem of gain feedback driving the closed-poles into the right half plane has been solved, but only for very small gains.
+  This will not allow sufficient bandwidth tracking of altitude commands.
+  Because of this we need to do something to bend the root locus branches farther into the left half plane.
+  We use a compensator of the following form
+  \begin{equation}
+    \label{eqn.Ghm}
+    G_{hm}(s)=K_{hm}\frac{s+z_{hm}}{s+p_{hm}}
+  \end{equation}
+  where $0<z_{hm}<p_{hm}$.
+  Choosing
+  \begin{equation*}
+    \begin{split}
+      z_{hm} & = 0.3 \\
+      p_{hm} & = 5 \\
+    \end{split}
+  \end{equation*}
+  the root locus becomes
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=5.5in]{\figurepath/root_locus_Gml_thetacmd_Gh_07.pdf}
+      \vspace{-0.1in}
+      \caption{Root locus plot for transfer function $G_{hm}(s)\cdot h(s)/\theta_{\text{cmd}}(s)$. The figure on the right shows a zoomed view.}
+    \end{center}
+  \end{figure}
+  Using this root locus we pick $K_{hm}=0.0002$ giving the following compensator which completes the design of the pitch angle loop closure.
+  \begin{equation*}
+    G_{hm}(s)=0.0002\frac{s+0.3}{s+5}
+  \end{equation*}
+  The block diagram is given by
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=6.5in]{\figurepath/closing_altitude_loop_v02.pdf}
+      \vspace{-0.1in}
+      \caption{Altitude loop block diagram}
+    \end{center}
+  \end{figure}
+
+  The controller selected as described above provided -30 dB gain margin, and a phase margin of 72 degrees at the control input, as shown in the following Bode plot.
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=4.0in]{\figurepath/bode_h_01.eps}
+      \vspace{-0.1in}
+      \caption{Closed pitch-angle loop Bode plot at control input}
+    \end{center}
+  \end{figure}
+
+  \subsection{Closed-Loop System}
+
+  With the altitude loop closed, the closed-loop system is complete, with the result being a stable system, which is capable of tracking constant reference altitudes $h_{\text{cmd}}$.
+  The closed-loop transfer function is given by
+
+  \begin{equation*}
+    \frac{h}{h_{\text{cmd}}}(s) =
+    \frac{-0.02462 (s-18.37) (s+18.49) (s+1) (s+0.3)}
+    {(s+5.9) (s+4.924) (s+0.5811) (s+0.2401) (s+0.0836) (s^2 + 2.36s + 7.407)}
+  \end{equation*}
+
+  The step response of this system is shown in Figure~\ref{fig.altitudeStep} below.
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=4.0in]{\figurepath/altitudeStep.eps}
+      \vspace{-0.1in}
+      \caption{Reference altitude step response.\label{fig.altitudeStep}}
+    \end{center}
+  \end{figure}
+
+  We note that although this classical approach was taken to close the pitch angle and altitude feedback loops, other techniques can be used as well.
+
+  \section{Adaptive Control Design}\label{sec.innerloopadaptive}
+
+  Section~\ref{sec.baseline} described the process of designing the baseline controllers for velocity and altitude when the stability and control derivatives were all known.
+  The velocity dynamics in\ \eqref{eqn.velocityss} were augmented with integral action resulting in the augmented open-loop dynamics in the form of\ \eqref{eqn.cersystem}.
+  The baseline controller was designed for this system to achieve the desired stability margins.
+  The longitudinal dynamics in\ \eqref{eqn.longitudinalss} were partitioned into the short period dynamics in\ \eqref{eqn.shortperiodss} and again using integral action, resulting in the augmented open-loop plant dynamics in the form of\ \eqref{eqn.cersystem}.
+  Similarly, a baseline controller was designed for this system.
+  The guidance dynamics in\ \eqref{eqn.guidancess} were then included, and the remaining loops were closed around the closed inner-loop controller to achieve an altitude tracking controller.
+
+  In this section, we design an \textit{adaptive} inner-loop controller for\ \eqref{eqn.velocityss} and\ \eqref{eqn.shortperiodss} to achieve stability and command tracking when the stability and control derivatives are \textit{unknown}.
+  By again using integral action as in\ \eqref{eqn.integrator} the open-loop augmented dynamics for the velocity and short period subsystems are represented by a system of the form in\ \eqref{eqn.uncsystem}.
+  To accommodate uncertainty in\ \eqref{eqn.uncsystem}, we augment the baseline control laws as in\ \eqref{eqn.uth} and\ \eqref{eqn.ue} with an adaptive term as follows
+  \begin{equation}
+    \label{eqn.u}
+    u = (K_{x}+\Theta(t))^{\top}x
+  \end{equation}
+  We select the following closed-loop reference model (CRM), which has been show to provide improved transient properties over the classical model-reference adaptive controller.\cite{gibson.aiaacrm.2012,gibson.ecc.2013,gibson.ieeeaccess.2013,gibson.acc.2013}
+  \begin{equation}
+    \label{eqn.refmodel}
+    \begin{split}
+      \dot{x}_{m} &= A_{m}x_{m} + B_{\text{cmd}}z_{\text{cmd}} + L(x_{m}-x) \\
+      z_{m} &= (C_{z} + D_{z}K_{x})x_{m} + L_{2}(x_{m}-x)
+    \end{split}
+  \end{equation}
+  where $A_{m} = A + BK_{x}^{\top}$ and $K_{x}$ is selected such that $A_{m}$ is Hurwitz.
+  $L$ is then selected such that $A_{m}+L$ is Hurwitz, with
+  \begin{equation*}
+    L =
+    \begin{bmatrix}
+      L_{1} \\
+      L_{2}
+    \end{bmatrix}
+  \end{equation*}
+  The selection of $A_{m}$ as described ensures the existence of a nominal parameter $\Theta^{*}$ that satisfies the following matching condition
+  \begin{equation*}
+    A + B\Lambda K_{x}^{\top} + B\Lambda\Theta^{*\top} + B\Psi^{\top} = A_{m}
+  \end{equation*}
+  where $\Theta^{*}$ is given by
+  \begin{equation*}
+    \Theta^{*\top}= \Lambda^{-1}\bigr((I - \Lambda)K_{x}^{\top} - \Psi^{\top}\bigr)
+  \end{equation*}
+  The tracking error and parameter error, respectively, can be defined as
+  \begin{equation*}
+    \begin{split}
+      e_{x} &= x - x_{m} \\
+      \widetilde{\Theta} &= \Theta - \Theta^{*} \\
+    \end{split}
+  \end{equation*}
+  The error dynamics are described by subtracting\ \eqref{eqn.uncsystem} and\ \eqref{eqn.refmodel} as
+  \begin{equation}
+    \label{eqn.errordynamics}
+    \dot{e}_{x} = (A_{m}+L)e_{x} + B\Lambda\widetilde{\Theta}^{\top}x
+  \end{equation}
+  We choose the following update law
+  \begin{equation}
+    \label{eqn.updatelaw}
+    \dot{\widetilde{\Theta}}=-\Gamma xe_{x}^{\top}P_{x}B\text{sign}(\Lambda)
+  \end{equation}
+  where $P_{x}$ is the solution to Lyapunov equation
+  \begin{equation}
+    \label{eqn.lyap}
+    (A_{m}+L)^{\top}P_{x} + P_{x}(A_{m}+L) = -Q_{x}
+  \end{equation}
+  and where $Q_{x}>0$ is a free design parameter.
+  The stability of this inner-loop control system is well established, as given by Theorem~\ref{thm.innerloop}.
+
+  \begin{thm-dan}\label{thm.innerloop}
+    Given the uncertain linear system in\ \eqref{eqn.uncsystem} which satisfies Assumption~\ref{ass.uncsystem}, with the control law in\ \eqref{eqn.u}, reference model in\ \eqref{eqn.refmodel}, and the update law in\ \eqref{eqn.updatelaw} results in global stability for all bounded reference inputs $z_{\text{cmd}}$, with $\lim_{t\rightarrow\infty}e_{x}(t)=0$.
+  \end{thm-dan}
+
+  \begin{proof-dan}
+    With a radially unbounded Lyapunov function candidate
+    \begin{equation}
+      \label{eqn.lyapfunction}
+      V(e_{x},\widetilde{\Theta}) = e_{x}^{\top}P_{x}e_{x}+\text{tr}\bigr(|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\widetilde{\Theta}\bigr)
+    \end{equation}
+    we obtain a time-derivative $\dot{V}$ as
+    \begin{equation*}
+      \dot{V}=\dot{e}_{x}^{\top}P_{x}e_{x}
+      + e_{x}^{\top}P_{x}\dot{e}_{x}
+      + \text{tr}\bigr(|\Lambda|\dot{\widetilde{\Theta}}^{\top}\Gamma^{-1}\widetilde{\Theta}\bigr)
+      + \text{tr}\bigr(|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\dot{\widetilde{\Theta}}\bigr)
+    \end{equation*}
+    Substituting in the error dynamics equation from above we obtain
+    \begin{equation*}
+      \begin{split}
+        \dot{V}
+        &=
+        ((A_{m}+L)e_{x}+B\Lambda\widetilde{\Theta}^{\top}x)^{\top}P_{x}e_{x}
+        + e_{x}^{\top}P_{x}((A_{m}+L)e_{x}+B\Lambda\widetilde{\Theta}^{\top}x)
+        + 2\text{tr}\bigr(|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\dot{\widetilde{\Theta}}\bigr) \\
+        %
+        &=
+        e_{x}^{\top}(A_{m}+L)^{\top}P_{x}e_{x}+e_{x}^{\top}P_{x}(A_{m}+L)e_{x}
+        + 2e_{x}^{\top}P_{x}B\Lambda\widetilde{\Theta}^{\top}x
+        + 2\text{tr}\bigr(|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\dot{\widetilde{\Theta}}\bigr) \\
+        %
+        &=
+        e_{x}^{\top}((A_{m}+L)^{\top}P_{x}+P_{x}(A_{m}+L))e_{x}
+        + 2e_{x}^{\top}P_{x}B\Lambda\widetilde{\Theta}^{\top}x
+        + 2\text{tr}\bigr(|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\dot{\widetilde{\Theta}}\bigr) \\
+        %
+        &=
+        - e_{x}^{\top}Q_{x}e_{x}
+        + 2e_{x}^{\top}P_{x}B\Lambda\widetilde{\Theta}^{\top}x
+        + 2\text{tr}\bigr(|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\dot{\widetilde{\Theta}}\bigr) \\
+      \end{split}
+    \end{equation*}
+    Where $Q_{x}=Q_{x}^{\top}>0$ and $P_{x}$ is the solution to the Lyapunov equation\ \eqref{eqn.lyap}.
+    Substituting the update law in\ \eqref{eqn.updatelaw}, $\dot{V}$ becomes
+    \begin{equation*}
+      \begin{split}
+        \dot{V}
+        &=
+        -e_{x}^{\top}Q_{x}e_{x}
+        + 2e_{x}^{\top}P_{x}B\Lambda\widetilde{\Theta}^{\top}x
+        +2\text{tr}\bigr(|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\bigr(-\Gamma xe_{x}^{\top}P_{x}B\text{sgn}(\Lambda)\bigr)\bigr) \\
+        %
+        &=
+        - e_{x}^{\top}Q_{x}e_{x}
+        + 2e_{x}^{\top}P_{x}B\Lambda^{s}\widetilde{\Theta}^{\top}x
+        - 2\text{tr}\bigr(|\Lambda|\widetilde{\Theta}^{\top}xe_{x}^{\top}P_{x}B\text{sgn}(\Lambda)\bigr) \\
+        %
+        &=
+        - e_{x}^{\top}Q_{x}e_{x}
+        + 2e_{x}^{\top}P_{x}B\Lambda\widetilde{\Theta}^{\top}x
+        - 2\text{tr}(e_{x}^{\top}P_{x}B\Lambda\widetilde{\Theta}^{\top}x) \\
+        %
+        &=
+        -e_{x}^{\top}Q_{x}e_{x} \\
+      \end{split}
+    \end{equation*}
+    Which implies that $V$ is a Lyapunov function.
+    Since $V>0$ and $\dot{V}\leq0$, we have $V(t)\leq V(0)<\infty$.
+    Thus $V(t)\in\mathcal{L}_{\infty}$ which implies $e_{x}, \; \widetilde{\Theta}\in\mathcal{L}_{\infty}$.
+    Since $z_{\text{cmd}},\;e_{x}\in\mathcal{L}_{\infty}$ and $A_{m}$ in\ \eqref{eqn.refmodel} is Hurwitz, $x_{m}\in\mathcal{L}_{\infty}$, which implies that $x\in\mathcal{L}_{\infty}$.
+    Furthermore, $\int_{0}^{t}\dot{V}(\tau)d\tau=V(t)-V(0)$ and since $V$ is non increasing and positive definite, $V(0)-V(t)\leq V(0)$.
+    This gives $-\int_{0}^{t}\dot{V}(\tau)d\tau\leq V(0)$.
+    Substituting in our expression for $\dot{V}=-e_{x}^{\top}Q_{x}e_{x}$ gives $\int_{0}^{t}e_{x}(\tau)^{\top}Q_{x}e_{x}(\tau)d\tau\leq V(0)$ and in turn that $e_{x}\in\mathcal{L}_{2}$.
+    Finally, looking at\ \eqref{eqn.errordynamics} with $e_{x}, \; \widetilde{\Theta}, \;, x_{m}\in\mathcal{L}_{\infty}$ we have that $\dot{e}_{x}\in\mathcal{L}_{\infty}$.
+    With this, we conclude using Barbalat's Lemma\ \cite{narendra.stable.2005} that $\lim_{t\rightarrow\infty}e_{x}(t)=0$.
+    Since Eq.\ \eqref{eqn.lyapfunction} is radially unbounded stability is global.
+  \end{proof-dan}
+
+  \begin{rem-dan}
+    The update law in\ \eqref{eqn.updatelaw} can be changed to include robust modifications such as $\sigma$-modification, $e$-modification, or projection, without any change to the proposed control architecture.
+  \end{rem-dan}
+
+  This inner-loop control architecture can be visualized with the following block diagram, where for all bounded commands $z_{\text{cmd}}$, the plant state $x$ tracks the reference model state $x_{m}$ asymptotically, and thus the regulated output $z$ tracks $z_{m}$ asymptotically, where $z_{m}$ is essentially a filtered version of $z_{\text{cmd}}$ generated by the reference model in\ \eqref{eqn.refmodel}.
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=3.0in]{\figurepath/simple_block_with_reference.pdf}
+      \vspace{-0.1in}
+      \caption{Completed inner-loop adaptive design block diagram}
+    \end{center}
+  \end{figure}
+
+  This inner loop controller provides stability in the presence of uncertainty in stability and control derivatives, and provides command tracking of an inner-loop variable.
+  The problem now is as follows: given the short period dynamics in\ \eqref{eqn.shortperiodss} with uncertainty and integral action resulting in a system of the form in\ \eqref{eqn.uncsystem}, control law in\ \eqref{eqn.u}, reference model in\ \eqref{eqn.refmodel}, and the update law in\ \eqref{eqn.updatelaw}, how do we introduce the guidance dynamics in\ \eqref{eqn.guidancess} and design $z_{\text{cmd}}$ such that $h$ follows $h_{m}$ where $h_{m}$ is a suitably generated signal.
+  The solution to this problem will complete the outer-loop control design, and is described in the following section.
+
+  \section{Outer Loop Control Design}\label{sec.outerloop}
+
+  Combining the integral augmented, uncertain short-period dynamics in the form of\ \eqref{eqn.uncsystem} with the outer-loop guidance dynamics as given by\ \eqref{eqn.guidancess} we have the following system
+  \begin{equation}
+    \label{eqn.plantouter}
+    \begin{split}
+      \dot{x} &= Ax + B(\Lambda u+\Psi^{\top}x) + B_{\text{cmd}}z_{\text{cmd}} \\
+      \dot{x}_{g} &= A_{g}x_{g} + B_{g}x \\
+    \end{split}
+  \end{equation}
+  where
+  \begin{equation*}
+    A_{g} =
+    \begin{bmatrix}
+      0 & 0 \\
+      v_{\text{eq}}\cos(\gamma_{\text{eq}}) & 0
+    \end{bmatrix}
+    \qquad
+    B_{g} =
+    \begin{bmatrix}
+      0 & 1 & 0 \\
+    -v_{\text{eq}}\cos(\gamma_{\text{eq}}) & 0 & 0
+    \end{bmatrix}
+  \end{equation*}
+  We introduce an additional outer-loop reference model in addition to the inner-loop reference model in\ \eqref{eqn.refmodel} to obtain the entire reference model as
+  \begin{equation}
+    \label{eqn.refmodelouter}
+    \begin{split}
+      \dot{x}_{m} &= A_{m}x_{m} + B_{\text{cmd}}z_{\text{cmd}} + L(x_{m}-x) \\
+      \dot{x}_{gm} &= A_{g}x_{gm} + B_{g}x_{m} + L_{x}(x_{m}-x) + L_{g}(x_{gm}-x_{g}) \\
+    \end{split}
+  \end{equation}
+  where $L_{x}\in\mathbb{R}^{n_{g}\times n}$, $L_{g}\in\mathbb{R}^{n_{g}\times n_{g}}$, and $x_{gm}\in\mathbb{R}^{n_{g}}$ is given by
+  \begin{equation*}
+    x_{gm} =
+    \begin{bmatrix}
+      \theta_{m} &
+      h_{m}
+    \end{bmatrix}^{\top}
+  \end{equation*}
+  The outer-loop error is given by
+  \begin{equation*}
+    e_{g} = x_{g} - x_{gm}
+  \end{equation*}
+  and the goal is to design an outer-loop controller such that $\lim_{t\rightarrow\infty}e_{g}(t)=0$, which will thus enforce altitude tracking as desired.
+  The proposed control architecture is represented in following block diagram
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=6.0in]{\figurepath/block_04c.pdf}
+      \vspace{-0.1in}
+      \caption{Complete integrated inner and outer-loop design block diagram\label{fig.inner_outer_full}}
+    \end{center}
+  \end{figure}
+
+  \subsection{Forward Loop Control Design}
+
+  The baseline controller that was design in Section~\ref{sec.analysisandclassical} for the nominal aircraft dynamics can now be used as the forward-loop component of the reference model which generates $z_{\text{cmd}}$ as shown in Figure~\ref{fig.inner_outer_full}.
+  We select $z_{\text{cmd}}$ using the baseline pitch controller in\ \eqref{eqn.Gthetam} as
+  \begin{equation}
+    \label{eqn.thetafbtf}
+    z_{\text{cmd}} = G_{\theta m}(s)(\theta_{\text{cmd}}-\theta_{m})
+  \end{equation}
+  where the pitch angle command $\theta_{\text{cmd}}$ is generated using the baseline altitude controller in\ \eqref{eqn.Ghm} as
+  \begin{equation}
+    \label{eqn.hfbtf}
+    \theta_{\text{cmd}} = G_{hm}(s)(h_{\text{cmd}}-h_{m})
+  \end{equation}
+  Each of these two forward-loop controllers can be designed using sequential loop closure or other technique.
+  The reference pitch angle feedback controller in\ \eqref{eqn.thetafbtf} can be represented in state-space as follows
+  \begin{equation}
+    \label{eqn.thetafbss}
+    \begin{split}
+      \dot{x}_{\theta m} &= A_{\theta m}x_{\theta m} + B_{\theta m}(\theta_{\text{cmd}} - \theta_{m}) \\
+      z_{\text{cmd}} &= C_{\theta m}x_{\theta m} + D_{\theta m}(\theta_{\text{cmd}} - \theta_{m}) \\
+    \end{split}
+  \end{equation}
+  And the forward loop reference altitude feedback controller in\ \eqref{eqn.hfbtf} can be represented in state-space as
+  \begin{equation}
+    \label{eqn.hfbss}
+    \begin{split}
+      \dot{x}_{hm} &= A_{hm}x_{hm} + B_{hm}(h_{\text{cmd}} - h_{m}) \\
+      \theta_{\text{cmd}} &= C_{hm}x_{hm} + D_{hm}(h_{\text{cmd}} - h_{m}) \\
+    \end{split}
+  \end{equation}
+  Combining these two controllers in\ \eqref{eqn.thetafbss} and\ \eqref{eqn.hfbss} we get
+  \begin{equation*}
+    \begin{split}
+      \begin{bmatrix}
+        \dot{x}_{\theta m} \\
+        \dot{x}_{hm} \\
+      \end{bmatrix}
+      &=
+      \begin{bmatrix}
+        A_{\theta m} & B_{\theta m}C_{hm} \\
+        0 & A_{hm} \\
+      \end{bmatrix}
+      \begin{bmatrix}
+        x_{\theta m} \\
+        x_{hm} \\
+      \end{bmatrix}
+      +
+      \begin{bmatrix}
+        B_{\theta m}D_{hm} \\
+        B_{hm} \\
+      \end{bmatrix}
+      h_{\text{cmd}}
+      +
+      \begin{bmatrix}
+        - B_{\theta m}(D_{hm}C_{h} + C_{\theta}) \\
+        - B_{hm}C_{h} \\
+      \end{bmatrix}
+      x_{gm} \\
+      %
+      z_{\text{cmd}}
+      &=
+      \begin{bmatrix}
+        C_{\theta m} & D_{\theta m}C_{hm}
+      \end{bmatrix}
+      \begin{bmatrix}
+        x_{\theta m} \\
+        x_{hm} \\
+      \end{bmatrix}
+      +
+      \begin{bmatrix}
+        - D_{\theta m}(D_{hm}C_{h} + C_{\theta})
+      \end{bmatrix}
+      x_{gm}
+      +
+      \begin{bmatrix}
+        D_{\theta m}D_{hm}
+      \end{bmatrix}
+      h_{\text{cmd}}
+    \end{split}
+  \end{equation*}
+  where this total forward loop controller can be represented more compactly as
+  \begin{equation}
+    \label{eqn.controllerss}
+    \begin{split}
+      \dot{x}_{fm} &= A_{f}x_{fm} + B_{f1}h_{\text{cmd}} + B_{f2}x_{gm} \\
+      z_{\text{cmd}} &= C_{f}x_{fm} + D_{f1}h_{\text{cmd}} + D_{f2}x_{gm} \\
+    \end{split}
+  \end{equation}
+  This forward-loop controller, designed using for the nominal baseline system as described in Section~\ref{sec.baseline} makes up a part of the reference model as shown in Figure~\ref{fig.inner_outer_full}.
+
+  \subsection{Feedback Control Design}
+
+  The inner-loop error dynamics were given in\ \eqref{eqn.errordynamics} and a Lyapunov function provided which showed stability of the closed loop system with update law in\ \eqref{eqn.updatelaw}.
+  In order to ensure stability when the additional guidance loops are closed, we consider the outer-loop error dynamics as well, given by subtracting\ \eqref{eqn.plantouter} from\ \eqref{eqn.refmodelouter} as follows
+  \begin{equation}
+    \label{eqn.outerlooperrordynamics}
+    \dot{e}_{g} = (A_{g} + L_{g})e_{g} + (B_{g} + L_{x})e_{x}
+  \end{equation}
+  From\ \eqref{eqn.outerlooperrordynamics} we can see that $L_{g}$ must be selected to ensure $A_{g}+L_{g}$ is Hurwitz to enforce stability of the outer-loop error dynamics.
+  The matrix $L_{x}$ is selected as
+  \begin{equation}
+    \label{eqn.Lx}
+    L_{x} = -B_{g}
+  \end{equation}
+  It is this choice of $L_{x}$ which modifies the outer-loop guidance portion of the reference model in response to errors within the inner loop.
+  It is this feature which enables stability of the combined inner and outer loops, and provides command tracking of altitude at the outer loop.
+  The stability of the complete system using the adaptive inner-loop and sequential loop closure procedure to close the outer loop is given in Theorem~\ref{thm.outerloop}.
+
+  \begin{thm-dan}\label{thm.outerloop}
+    The uncertain system in\ \eqref{eqn.plantouter} with inner-loop control input in\ \eqref{eqn.u}, update law in\ \eqref{eqn.updatelaw}, the reference model in\ \eqref{eqn.refmodelouter}, and $L_{x}$ given by\ \eqref{eqn.Lx}, and forward-loop controller in\ \eqref{eqn.controllerss} results in global stability, with $\lim_{t\rightarrow\infty}e_{x}(t)=0$ and $\lim_{t\rightarrow\infty}e_{g}(t)=0$.
+  \end{thm-dan}
+
+  \begin{proof-dan}
+    With a radially unbounded Lyapunov function candidate
+    \begin{equation}
+      \label{eqn.lyapfunction_2}
+      V(e_{x},e_{g},\widetilde{\Theta}) = e_{x}^{\top}P_{x}e_{x}
+      + e_{g}^{\top}P_{g}e_{g}
+      + |\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\widetilde{\Theta}
+    \end{equation}
+    where $P_{x}$ is the solution to the Lyapunov equation in\ \eqref{eqn.lyap} and where $P_{g}$ is the solution to the following Lyapunov equation
+    \begin{equation}
+      \label{eqn.lyapg}
+      (A_{g}+L_{g})^{\top}P_{g}+P_{g}(A_{g}+L_{g}) = -Q_{g}
+    \end{equation}
+    where $Q_{g}>0$.
+    We obtain a time-derivative $\dot{V}$ as
+    \begin{equation*}
+      \begin{split}
+        \dot{V}
+        &= \dot{e}_{x}^{\top}P_{x}e_{x}
+        + e_{x}^{\top}P_{x}\dot{e}_{x}
+        + \dot{e_{g}}^{\top}P_{g}e_{g}
+        + e_{g}^{\top}P_{g}\dot{e_{g}}
+        + 2|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\dot{\widetilde{\Theta}} \\
+        %
+        &= -e_{x}^{\top}Q_{x}e_{x}
+        + 2e_{x}^{\top}P_{x}B\Lambda\widetilde{\Theta}^{\top}x
+        + e_{g}^{\top}((A_{g} + L_{g})^{\top}P_{g}
+        + P_{g}(A_{g} + L_{g}))e_{g}
+        + 2e_{x}^{\top}(B_{g}+L_{x})^{\top}P_{g}e_{g}
+        + 2|\Lambda|\widetilde{\Theta}^{\top}\Gamma^{-1}\dot{\widetilde{\Theta}} \\
+        %
+        &= -e_{x}^{\top}Q_{x}e_{x}
+        - e_{g}^{\top}Q_{g}e_{g}
+        + 2e_{x}^{\top}(B_{g}+L_{x})^{\top}P_{g}e_{g} \\
+        %
+        &= -e_{x}^{\top}Q_{x}e_{x}
+        - e_{g}^{\top}Q_{g}e_{g}
+        + 2e_{x}^{\top}(B_{g}+L_{x})^{\top}P_{g}e_{g} \\
+      \end{split}
+    \end{equation*}
+     The choice of $L_{x}$ in\ \eqref{eqn.Lx} simplifies the Lyapunov derivative to
+    \begin{equation*}
+      \dot{V} = -e_{x}^{\top}Q_{x}e_{x}
+      - e_{g}^{\top}Q_{g}e_{g}
+    \end{equation*}
+    which implies that $V$ is a Lyapunov function.
+    Since $V>0$ and $\dot{V}\leq0$, we have $V(t)\leq V(0)<\infty$.
+    Thus $V(t)\in\mathcal{L}_{\infty}$ which implies $e_{x}, \; e_{g}, \; \widetilde{\Theta}\in\mathcal{L}_{\infty}$.
+    The combination of the forward-loop controller as given in\ \eqref{eqn.controllerss} and reference model in\ \eqref{eqn.refmodelouter} is given by:
+    \begin{equation}
+      \label{eqn.refmodeloutercl}
+      \begin{bmatrix}
+        \dot{x}_{m} \\
+        \dot{x}_{gm} \\
+        \dot{x}_{fm} \\
+      \end{bmatrix}
+      =
+      \begin{bmatrix}
+        A_{m} & B_{\text{cmd}}D_{f2} & B_{\text{cmd}}C_{f} \\
+        B_{g} & A_{g} & 0 \\
+        0 & B_{f2} & A_{f} \\
+      \end{bmatrix}
+      \begin{bmatrix}
+        x_{m} \\
+        x_{gm} \\
+        x_{fm}
+      \end{bmatrix}
+      +
+      \begin{bmatrix}
+        B_{\text{cmd}}D_{f1} \\
+        0 \\
+        B_{f1} \\
+      \end{bmatrix}
+      h_{\text{cmd}}+
+      \begin{bmatrix}
+        -L & 0 \\
+        -L_{x} & -L_{g} \\
+        0 & 0 \\
+      \end{bmatrix}
+      \begin{bmatrix}
+        e_{x} \\
+        e_{g} \\
+      \end{bmatrix}
+    \end{equation}
+    With $h_{\text{cmd}}, \; e_{x}, \; e_{g} \in\mathcal{L}_{\infty}$ and\ \eqref{eqn.refmodeloutercl} stable, $x_{m}, \; x_{gm}, \; x_{fm} \in\mathcal{L}_{\infty}$, which implies that $x, \; x_{g} \in\mathcal{L}_{\infty}$.
+    The inner-loop error dynamics in\ \eqref{eqn.errordynamics} and outer-loop error dynamics in\ \eqref{eqn.outerlooperrordynamics} can be combined as follows
+    \begin{equation}
+      \label{eqn.combinederrordynamics}
+      \begin{bmatrix}
+        \dot{e}_{x} \\
+        \dot{e}_{g}
+      \end{bmatrix}
+      =
+      \begin{bmatrix}
+        A_{m}+L & 0 \\
+        B_{g}+L_{x} & A_{g}+L_{g}
+      \end{bmatrix}
+      \begin{bmatrix}
+        e_{x} \\
+        e_{g}
+      \end{bmatrix}
+      +
+      \begin{bmatrix}
+        B \\
+        0
+      \end{bmatrix}
+      \Lambda\widetilde{\Theta}^{\top}x
+    \end{equation}
+    And with the input to the error dynamics in\ \eqref{eqn.combinederrordynamics} bounded, this implies that $\dot{e}_{x}, \; \dot{e}_{g}\in\mathcal{L}_{\infty}$.
+    Finally, $\int_{0}^{t}\dot{V}(\tau)d\tau=V(t)-V(0)$ and since $V$ is non increasing and positive definite, $V(0)-V(t)\leq V(0)$.
+    This gives $-\int_{0}^{t}\dot{V}(\tau)d\tau\leq V(0)$.
+    Substituting in our expression for $\dot{V}= - e_{x}^{\top}Q_{x}e_{x} - e_{g}^{\top}Q_{g}e_{g}$ gives $\int_{0}^{t}e_{x}(\tau)^{\top}Q_{x}e_{x}(\tau) + e_{g}(\tau)^{\top}Q_{g}e_{g}(\tau)d\tau\leq V(0)$ and in turn that $e_{x},\;e_{g}\in\mathcal{L}_{2}$.
+    With this, we conclude using Barbalat's Lemma\ \cite{narendra.stable.2005} that $\lim_{t\rightarrow\infty}e_{x}(t)=0$ and $\lim_{t\rightarrow\infty}e_{g}(t)=0$.
+  \end{proof-dan}
+
+  \subsection{Summary of Design Procedure}
+
+  \begin{enumerate}
+    \setlength{\itemsep}{0pt}
+    \item{Design an inner-loop controller as outlined in Section~\ref{sec.analysisandclassical}, with gain $K_{x}$ selected as described in Section~\ref{sec.baseline}.}
+    \item{Augment the baseline inner-loop control law with adaptive element as in\ \eqref{eqn.u}.}
+    \item{Use the reference model in\ \eqref{eqn.refmodel} where $L$ is selected such that $A_{m}+L$ is Hurwitz.}
+    \item{Select $Q_{x}>0$ and  solve the Lyapunov equation in\ \eqref{eqn.lyap} to obtain $P_{x}$}
+    \item{Use the update law in\ \eqref{eqn.updatelaw}}
+    \item{Select $L_{g}$ such that $A_{g}+L_{g}$ is Hurwitz, and select $L_{x}$ as in \ \eqref{eqn.Lx}}
+    \item{Use the additional outer-loop reference model in\ \eqref{eqn.refmodelouter}.}
+    \item{Finally, generate the inner-loop command $z_{\text{cmd}}$ from the altitude command $h_{\text{cmd}}$ by designing the nominal forward-loop controller in\ \eqref{eqn.controllerss}}
+  \end{enumerate}
+
+  \section{Simulation Results}\label{sec.simulationresults}
+
+  Figure~\ref{fig.time_response_1} shows the time response of the GHV when given an attitude profile to track at constant velocity, under a trim condition of Mach 6, at a trim altitude of 80,000 ft.
+  The first portion of the time response plot shows the performance of the nominal vehicle with no uncertainty when using the baseline controller.
+  At $t = 360$ seconds uncertainty is introduced in the stability and control derivatives of the GHV of up to several hundred percent while still using the baseline controller.
+  Significant oscillations can be observed, resulting in severe g-loading and large oscillations in the control effort.
+  At $t = 690$ seconds the adaptive controller is switched on, rapidly recovering the nominal performance without using excessive control inputs.
+
+  \section{Conclusion}
+
+  This paper has proposed a new sequential loop closure design for an adaptive autopilot, and is applied to the longitudinal dynamics of a hypersonic vehicle.
+  The control design involves partitioning the aircraft dynamics into its short-period and guidance dynamics, designing a reduced order adaptive controller for the short-period subsystem, and then closing an outer guidance loop around this inner loop.
+  The short-period dynamics have uncertain stability derivatives, and uncertain control derivatives.
+  The guidance dynamics contain only kinematics, and thus contain no uncertainty.
+  Therefore, an adaptive controller only needs to be designed for the inner-loop.
+  The outer-loop design uses components of a closed-loop reference model to feed the inner-loop error into the outer-loop portion of the reference model, which shapes the inner-loop reference command so the outer-loop command is tracked.
+  The resulting controller provides global stability in the presence of uncertainty in the stability and control derivatives, and uses fewer adaptive parameters than an adaptive controller designed without this sequential loop closure technique.
+
+  \begin{figure}[H]
+    \begin{center}
+      \includegraphics[width=6.5in]{\figurepath/time_response.png}
+      \caption{GHV time response\label{fig.time_response_1}}
+    \end{center}
+  \end{figure}
+
+  \section*{Appendix}\label{sec.appendix}
+
+  The nominal longitudinal plant matrices for a flight condition of Mach 6 at an altitude of 80,000 feet are:
+  \begin{equation*}
+    A_{p}=
+    \left[
+    \begin{array}{ccccc}
+      -0.0037 & -0.7169 & 0 & -31.818 & 0 \\
+      0 & -0.2398 & 1 & 0 & 0 \\
+      0 & 4.5689 & -0.1189 & 0 & 0 \\
+      0 & 0 & 1 & 0 & 0 \\
+      0 & -5866 & 0 & 5866 & 0 \\
+    \end{array}\right]
+    \hspace{0.5in}
+    B_{p}=
+    \left[
+    \begin{array}{cc}
+      27.262 & 0.06525 \\
+      0 & -0.0001 \\
+      0 & -0.18561 \\
+      0 & 0 \\
+      0 & 0 \\
+    \end{array}\right]
+  \end{equation*}
+
+  \subsection*{Velocity Controller}
+
+  The LQR weighting matrices and uncertainty for the velocity control loop are as follows
+
+  \begin{equation*}
+    Q_{\text{lqr}} = \text{diag}\bigr([
+    \begin{array}{cc}
+      10 & 1
+    \end{array}]
+    \bigr)
+    \hspace{0.5in}
+    R_{\text{lqr}} = 10
+  \end{equation*}
+
+  \begin{equation*}
+    \Gamma = \text{diag}\bigr([
+    \begin{array}{ccc}
+      1 & 1
+    \end{array}]
+    \bigr)
+  \end{equation*}
+
+  \begin{equation*}
+    \Psi_{p} = 0.1
+    \hspace{0.5in}
+    \Lambda = 0.8
+  \end{equation*}
+
+  \subsection*{Longitudinal Controller}
+
+  The LQR weighting matrices and uncertainty for the longitudinal control loop are as follows
+
+  \begin{equation*}
+    Q_{\text{lqr}} = \text{diag}\bigr(
+    [
+    \begin{array}{ccc}
+      0.1 & 0.1 & 10
+    \end{array}]
+    \bigr)
+    \hspace{0.5in}
+    R_{\text{lqr}} = 0.01
+  \end{equation*}
+
+  \begin{equation*}
+    \Gamma = \text{diag}\bigr([
+    \begin{array}{ccc}
+      1 & 10^{5} & 1
+    \end{array}]
+    \bigr)
+  \end{equation*}
+
+  \begin{equation*}
+    \Psi_{p} =[
+    \begin{array}{ccc}
+      -10 & -10
+    \end{array}]^{\top}
+    \hspace{0.5in}
+    \Lambda=0.8
+  \end{equation*}
+
+  \section{Acknowledgment}
+
+  Approved for Public Release; Distribution Unlimited. Case Number 88ABW--2015--5617.
+
+  \bibliography{\bibsourcepath}
+  \bibliographystyle{../sty/aiaa}
+
+\end{document}
